@@ -2,6 +2,7 @@ package driver
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -113,16 +114,21 @@ func RunPlugin(plugin FluxVolumePlugin) {
 	default:
 		utils.Finish(utils.NotSupport(os.Args))
 	}
-
 }
 
 // rotate log file by 2M bytes
 func setLogAttribute() {
 	driver := filepath.Base(os.Args[0])
 	logFile := LOGFILE_PREFIX + driver + ".log"
+
+	logFileDir, _ := filepath.Split(logFile)
+	if err := os.MkdirAll(logFileDir, 0755); err != nil {
+		utils.Finish(utils.Fail(fmt.Sprintf("failed to create log file dir '%s': %v", logFileDir, err)))
+	}
+
 	f, err := os.OpenFile(logFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
-		utils.Finish(utils.Fail("Log File open error"))
+		utils.Finish(utils.Fail(fmt.Sprintf("Log file open error: %v", err)))
 	}
 
 	// rotate the log file if too large
