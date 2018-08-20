@@ -1,7 +1,6 @@
 package disk
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -98,7 +97,7 @@ func (p *DiskPlugin) Attach(opts interface{}, nodeName string) utils.Result {
 	for {
 		retryDetachCount--
 		if retryDetachCount < 0 {
-			utils.FinishError("Detach disk timeout, failed: " + lastErr.Error())
+			utils.FinishError(fmt.Sprintf("Detach disk timeout, failed: %v", lastErr))
 		}
 		time.Sleep(1000 * time.Millisecond)
 		disks, _, err := p.client.DescribeDisks(describeDisksRequest)
@@ -108,7 +107,7 @@ func (p *DiskPlugin) Attach(opts interface{}, nodeName string) utils.Result {
 		if len(disks) >= 1 && disks[0].Status == ecs.DiskStatusAvailable {
 			break
 		}
-		lastErr = errors.New(fmt.Sprintf("%+v\n", disks))
+		lastErr = fmt.Errorf("%+v\n", disks)
 	}
 	log.Infof("Disk is ready to attach: %s", opt.VolumeName, opt.VolumeId, opt.FsType)
 
@@ -139,7 +138,7 @@ func (p *DiskPlugin) Attach(opts interface{}, nodeName string) utils.Result {
 		if len(disks) >= 1 && disks[0].Status == ecs.DiskStatusInUse {
 			break
 		}
-		lastErr = errors.New(fmt.Sprintf("%+v\n", disks))
+		lastErr = fmt.Errorf("%+v\n", disks)
 	}
 
 	// Step 6: Analysis attach device, list device after attach device
@@ -180,7 +179,7 @@ func (p *DiskPlugin) Detach(volumeName string, nodeName string) utils.Result {
 	p.initEcsClient()
 	regionId, instanceId, err := utils.GetRegionIdAndInstanceId(nodeName)
 	if err != nil {
-		utils.FinishError("Detach with describe error: " + err.Error())
+		utils.FinishError(fmt.Sprintf("Detach with describe error: %v", err))
 	}
 
 	// Step 2: check disk
@@ -191,7 +190,7 @@ func (p *DiskPlugin) Detach(volumeName string, nodeName string) utils.Result {
 	}
 	disks, _, err := p.client.DescribeDisks(describeDisksRequest)
 	if err != nil || len(disks) == 0 {
-		utils.FinishError("Failed to list Volume: " + volumeName + ", with error: " + err.Error())
+		utils.FinishError(fmt.Sprintf("Failed to list volume: '%s' with error: %v", volumeName, err))
 	}
 
 	// Step 3: Detach disk
@@ -205,7 +204,7 @@ func (p *DiskPlugin) Detach(volumeName string, nodeName string) utils.Result {
 
 		err = p.client.DetachDisk(disk.InstanceId, disk.DiskId)
 		if err != nil {
-			utils.FinishError("Disk, Failed to detach: " + err.Error())
+			utils.FinishError(fmt.Sprintf("Disk, Failed to detach: %v", err))
 		}
 	}
 
